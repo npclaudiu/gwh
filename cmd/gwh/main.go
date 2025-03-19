@@ -29,9 +29,18 @@ func main() {
 
 	app := &cli.App{
 		Name:                   "gwh",
+		Description:            "Git Analitics Warehouse",
 		UseShortOptionHandling: true,
 		EnableBashCompletion:   true,
 		Suggest:                true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "prefix",
+				Aliases: []string{"p"},
+				Value:   "",
+				Usage:   "warehouse lookup directory (defaults to current working directory)",
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "init",
@@ -39,32 +48,33 @@ func main() {
 				Action: func(cliCtx *cli.Context) error {
 					log.Debug("initializing warehouse...")
 
-					// Handle "--cwd" option.
-					//
-					cwdOption := cliCtx.String("cwd")
-
-					if cwdOption != "" {
-						if !filepath.IsAbs(cwdOption) {
-							cwdOption = filepath.Join(cwd, cwdOption)
-						}
-					} else {
-						cwdOption = cwd
-					}
-
-					// Handle "--sync/--no-sync" option (TODO).
-					//
-
-					// Initialize the warehouse.
-					//
-					err := gwh.Init(ctx, &gwh.InitOptions{
-						Cwd: cwdOption,
-					})
-
-					if err != nil {
+					if err := gwh.Init(ctx, &gwh.InitOptions{
+						Prefix: cliPrefixFlag(cliCtx, cwd),
+					}); err != nil {
 						log.Fatal("init failed", "error", err)
 					}
 
 					return nil
+				},
+			},
+			{
+				Name: "repository",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "add",
+						Usage: "add repository to warehouse",
+						Action: func(cliCtx *cli.Context) error {
+							log.Debug("adding repository...")
+
+							if err := gwh.AddRepository(ctx, &gwh.AddRepositoryOptions{
+								Prefix: cliPrefixFlag(cliCtx, cwd),
+							}); err != nil {
+								log.Fatal("adding repository failed", "error", err)
+							}
+
+							return nil
+						},
+					},
 				},
 			},
 			{
@@ -81,4 +91,27 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func cliFlag(cliCtx *cli.Context, flagName string, defaultValue string) string {
+	if cliCtx.IsSet(flagName) {
+		return cliCtx.String(flagName)
+	}
+
+	return defaultValue
+
+}
+
+func cliPrefixFlag(cliCtx *cli.Context, defaultValue string) string {
+	prefix := cliFlag(cliCtx, "prefix", "")
+
+	if prefix != "" {
+		if !filepath.IsAbs(prefix) {
+			prefix = filepath.Join(defaultValue, prefix)
+		}
+	} else {
+		prefix = defaultValue
+	}
+
+	return prefix
 }

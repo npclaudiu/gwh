@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 
 	"database/sql"
 
@@ -15,26 +14,22 @@ import (
 )
 
 type InitOptions struct {
-	Cwd string
+	Prefix string
 }
 
 func Init(_ context.Context, options *InitOptions) error {
 	// Check if the working directory is valid.
 	//
-	cwd := options.Cwd
+	prefix, err := validatePrefix(options.Prefix)
 
-	if !filepath.IsAbs(cwd) {
-		return ErrWorkDirInvalid
-	}
-
-	if stat, err := os.Stat(cwd); err != nil || !stat.IsDir() {
-		return ErrWorkDirInvalid
+	if err != nil {
+		return err
 	}
 
 	// Create the warehouse directory.
 	//
-	wh := path.Join(cwd, WarehouseDirName)
-	whStat, err := os.Stat(wh)
+	whDir := path.Join(prefix, WarehouseDirName)
+	whDirStat, err := os.Stat(whDir)
 	checkWhStat := true
 
 	if err != nil {
@@ -46,21 +41,21 @@ func Init(_ context.Context, options *InitOptions) error {
 		}
 	}
 
-	if checkWhStat && whStat.IsDir() {
+	if checkWhStat && whDirStat.IsDir() {
 		return ErrWarehouseDirExists
 	}
 
-	if err := os.Mkdir(wh, 0755); err != nil {
+	if err := os.Mkdir(whDir, 0755); err != nil {
 		return ErrWarehouseDirInitFailed
 	}
 
 	// Create the manifest file.
 	//
 	manifest := NewManifest(&ManifestOptions{
-		Version: "1.0.0",
+		Version: ManifestVersionCurrent,
 	})
 
-	if err = manifest.WriteFile(path.Join(wh, ManifestFileName)); err != nil {
+	if err = WriteManifest(manifest, path.Join(whDir, ManifestFileName)); err != nil {
 		return err
 	}
 
@@ -69,7 +64,7 @@ func Init(_ context.Context, options *InitOptions) error {
 	// This will need to be revisited, as the current implementation focuses
 	// on supporting only one Git repository with no submodules.
 	//
-	db, err := sql.Open("duckdb", path.Join(wh, DatabaseFileName))
+	db, err := sql.Open("duckdb", path.Join(whDir, AnalyticsDatabaseFileName))
 	if err != nil {
 		return err
 	}
@@ -111,7 +106,7 @@ func Init(_ context.Context, options *InitOptions) error {
 		edge tables (
 			git_commits_parents
 				source key (commit_id) references git_commits (id)
-                destination key (parent_commit_id) references git_commits (id)
+				destination key (parent_commit_id) references git_commits (id)
 				label parent
   		);
 	`)
