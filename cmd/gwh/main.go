@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
-	gwh "github.com/npclaudiu/gwh/v1"
+	"github.com/npclaudiu/gwh/v1"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,10 +23,6 @@ func main() {
 		log.Fatal("failed to load working directory", err)
 	}
 
-	if !filepath.IsAbs(cwd) {
-		log.Fatal("working directory must be absolute")
-	}
-
 	app := &cli.App{
 		Name:                   "gwh",
 		Description:            "Git Analitics Warehouse",
@@ -38,7 +34,7 @@ func main() {
 				Name:    "prefix",
 				Aliases: []string{"p"},
 				Value:   "",
-				Usage:   "warehouse lookup directory (defaults to current working directory)",
+				Usage:   "directory containing the warehouse directory",
 			},
 		},
 		Commands: []*cli.Command{
@@ -58,23 +54,18 @@ func main() {
 				},
 			},
 			{
-				Name: "repository",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "add",
-						Usage: "add repository to warehouse",
-						Action: func(cliCtx *cli.Context) error {
-							log.Debug("adding repository...")
+				Name:  "add",
+				Usage: "add repository to warehouse",
+				Action: func(cliCtx *cli.Context) error {
+					log.Debug("adding repository...")
 
-							if err := gwh.AddRepository(ctx, &gwh.AddRepositoryOptions{
-								Prefix: cliPrefixFlag(cliCtx, cwd),
-							}); err != nil {
-								log.Fatal("adding repository failed", "error", err)
-							}
+					if err := gwh.AddRepository(ctx, &gwh.AddRepositoryOptions{
+						Prefix: cliPrefixFlag(cliCtx, cwd),
+					}); err != nil {
+						log.Fatal("adding repository failed", "error", err)
+					}
 
-							return nil
-						},
-					},
+					return nil
 				},
 			},
 			{
