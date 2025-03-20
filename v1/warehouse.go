@@ -8,6 +8,7 @@ import (
 )
 
 type Warehouse struct {
+	warehouseLayout *hostfs.WarehouseLayout
 	controlDatabase *control.ControlDatabase
 }
 
@@ -26,12 +27,17 @@ func Open(location string) (*Warehouse, error) {
 	controlDatabase, err := control.OpenControlDatabase(controlDatabaseFile)
 
 	if err != nil {
-		return nil, fmt.Errorf("gwh: %w", err)
+		return nil, fmt.Errorf("gwh: failed to open control database: %w", err)
 	}
 
 	return &Warehouse{
+		warehouseLayout: warehouseLayout,
 		controlDatabase: controlDatabase,
 	}, nil
+}
+
+func (w *Warehouse) Close() {
+	w.controlDatabase.Close()
 }
 
 func (w *Warehouse) LinkRepository(path string) error {

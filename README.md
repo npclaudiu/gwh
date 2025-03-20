@@ -25,9 +25,27 @@ go get https://github.com/npclaudiu/gwh
 ```
 
 ```go
-import "github.com/npclaudiu/gwh/v1"
+import (
+	"fmt"
 
-err := gwh.Init(ctx, &gwh.InitOptions{
-    Prefix: "path/to/project_x",
-})
+    "github.com/npclaudiu/gwh/v1"
+)
+
+func demo() error {
+    warehouse, err := gwh.Open("path/to/warehouse/store")
+
+    if err != nil {
+        return fmt.Errorf("failed to open warehouse: %w", err)
+    }
+
+    defer warehouse.Close()
+
+    err := warehouse.LinkRepository("path/to/git_repository")
+
+    if err != nil {
+        return fmt.Errorf("failed to link repository: %w", err)
+    }
+
+    return nil
+}
 ```

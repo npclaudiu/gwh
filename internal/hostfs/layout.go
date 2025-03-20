@@ -29,8 +29,14 @@ type WarehouseLayout struct {
 func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
 	// Check location.
 	//
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		return nil, fmt.Errorf("gwh: failed to load working directory: %w", err)
+	}
+
 	if !filepath.IsAbs(location) {
-		return nil, errors.New("gwh: expected absolute path")
+		location = filepath.Join(cwd, location)
 	}
 
 	if stat, err := os.Stat(location); err != nil || !stat.IsDir() {
