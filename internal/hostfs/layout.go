@@ -46,7 +46,7 @@ func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
 	// Check warehouse directory, creating it if it doesn't exist.
 	//
 	whDir := path.Join(location, WarehouseDirectoryName)
-	whDirStat, err := os.Stat(whDir)
+	_, err = os.Stat(whDir)
 	whDirExists := true
 
 	if err != nil {
@@ -55,10 +55,6 @@ func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
 		} else {
 			return nil, fmt.Errorf("gwh: failed to stat warehouse path: %w", err)
 		}
-	}
-
-	if !whDirStat.IsDir() {
-		return nil, fmt.Errorf("gwh: warehouse path is not a directory")
 	}
 
 	if !whDirExists {

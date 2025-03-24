@@ -3,13 +3,13 @@ package gwh
 import (
 	"fmt"
 
-	"github.com/npclaudiu/gwh/internal/control"
+	"github.com/npclaudiu/gwh/internal/controldb"
 	"github.com/npclaudiu/gwh/internal/hostfs"
 )
 
 type Warehouse struct {
 	warehouseLayout *hostfs.WarehouseLayout
-	controlDatabase *control.ControlDatabase
+	controlDatabase *controldb.ControlDatabase
 }
 
 func Open(location string) (*Warehouse, error) {
@@ -24,7 +24,7 @@ func Open(location string) (*Warehouse, error) {
 	// Open control database.
 	//
 	controlDatabaseFile := warehouseLayout.GetPath(hostfs.ControlDatabaseFile)
-	controlDatabase, err := control.OpenControlDatabase(controlDatabaseFile)
+	controlDatabase, err := controldb.Open(controlDatabaseFile)
 
 	if err != nil {
 		return nil, fmt.Errorf("gwh: failed to open control database: %w", err)
@@ -38,8 +38,4 @@ func Open(location string) (*Warehouse, error) {
 
 func (w *Warehouse) Close() {
 	w.controlDatabase.Close()
-}
-
-func (w *Warehouse) LinkRepository(path string) error {
-	return nil
 }

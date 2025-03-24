@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() { <-c; cancel() }()
@@ -44,35 +44,13 @@ func main() {
 				Action: func(cliCtx *cli.Context) error {
 					log.Debug("initializing warehouse...")
 
-					if err := gwh.Init(ctx, &gwh.InitOptions{
-						Prefix: cliPrefixFlag(cliCtx, cwd),
-					}); err != nil {
+					location := cliPrefixFlag(cliCtx, cwd)
+					_, err := gwh.Open(location)
+
+					if err != nil {
 						log.Fatal("init failed", "error", err)
 					}
 
-					return nil
-				},
-			},
-			{
-				Name:  "add",
-				Usage: "add repository to warehouse",
-				Action: func(cliCtx *cli.Context) error {
-					log.Debug("adding repository...")
-
-					if err := gwh.AddRepository(ctx, &gwh.AddRepositoryOptions{
-						Prefix: cliPrefixFlag(cliCtx, cwd),
-					}); err != nil {
-						log.Fatal("adding repository failed", "error", err)
-					}
-
-					return nil
-				},
-			},
-			{
-				Name:  "sync",
-				Usage: "synchronize warehouse with repository",
-				Action: func(cliCtx *cli.Context) error {
-					log.Debug("synchronize warehouse with repository...")
 					return nil
 				},
 			},
@@ -93,15 +71,15 @@ func cliFlag(cliCtx *cli.Context, flagName string, defaultValue string) string {
 
 }
 
-func cliPrefixFlag(cliCtx *cli.Context, defaultValue string) string {
+func cliPrefixFlag(cliCtx *cli.Context, cwd string) string {
 	prefix := cliFlag(cliCtx, "prefix", "")
 
 	if prefix != "" {
 		if !filepath.IsAbs(prefix) {
-			prefix = filepath.Join(defaultValue, prefix)
+			prefix = filepath.Join(cwd, prefix)
 		}
 	} else {
-		prefix = defaultValue
+		prefix = cwd
 	}
 
 	return prefix
