@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/npclaudiu/gwh/internal/controldb"
 	"github.com/npclaudiu/gwh/internal/gitops"
@@ -83,6 +84,59 @@ func (w *Warehouse) LinkRepository(name, repositoryPath string) error {
 
 	if err := w.controlDatabase.LinkRepository(name, path); err != nil {
 		return fmt.Errorf("gwh: failed to link repository: %w", err)
+	}
+
+	return nil
+}
+
+// SyncRepository pulls data from a linked repository into the warehouse.
+func (w *Warehouse) SyncRepository(name string) error {
+	rl, err := w.controlDatabase.GetRepositoryLink(name)
+
+	if err != nil {
+		return fmt.Errorf("gwh: failed to get repository link: %w", err)
+	}
+
+	path := w.layout.ResolvePath(rl.Path)
+
+	repository, err := gitops.OpenRepository(path)
+
+	if err != nil {
+		return fmt.Errorf("gwh: failed to open repository for syncing: %w", err)
+	}
+
+	branches, err := repository.Branches()
+
+	if err != nil {
+		return fmt.Errorf("gwh: failed to get repository branches: %w", err)
+	}
+
+	for {
+		branch, err := branches.Next()
+
+		if err != nil {
+			break
+		}
+
+		commits, err := repository.Log(&git.LogOptions{
+			From: branch.Hash(),
+		})
+
+		if err != nil {
+			return fmt.Errorf("gwh: failed to get branch commits: %w", err)
+		}
+
+		fmt.Println("Branch:", branch.Name())
+
+		for {
+			commit, err := commits.Next()
+
+			if err != nil {
+				break
+			}
+
+			fmt.Println("Commit:", commit.Hash, commit.Message)
+		}
 	}
 
 	return nil

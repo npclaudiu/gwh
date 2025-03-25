@@ -2,6 +2,7 @@ package controldb
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -13,6 +14,10 @@ import (
 
 const (
 	RegKeySchemaVersion string = "schema_version"
+)
+
+var (
+	ErrRepositoryLinkNotFound = errors.New("gwh: repository link not found")
 )
 
 type ControlDatabase struct {
@@ -264,6 +269,39 @@ func (c *ControlDatabase) LinkRepository(name, path string) error {
 	// the repository being linked.
 
 	return nil
+}
+
+type RepositoryLink struct {
+	Name string
+	Path string
+}
+
+func (c *ControlDatabase) GetRepositoryLink(name string) (*RepositoryLink, error) {
+	q := `
+		select name, path
+			from gwh_git_repositories
+			where name = ?;
+	`
+
+	rows, err := c.db.Query(q, name)
+
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var link RepositoryLink
+
+		if err := rows.Scan(&link.Name, &link.Path); err != nil {
+			return nil, fmt.Errorf("failed to scan repository link: %w", err)
+		}
+
+		return &link, nil
+	}
+
+	return nil, ErrRepositoryLinkNotFound
 }
 
 //#endregion

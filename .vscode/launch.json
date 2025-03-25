@@ -24,6 +24,18 @@
                 "repo1",
                 "."
             ]
+        },
+        {
+            "name": "Launch `gwh sync repo1`",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/gwh/",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "sync",
+                "repo1"
+            ]
         }
     ]
 }
