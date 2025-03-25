@@ -2,20 +2,26 @@ package gwh
 
 import (
 	"fmt"
+	"path/filepath"
 
+	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/npclaudiu/gwh/internal/controldb"
-	"github.com/npclaudiu/gwh/internal/hostfs"
+	"github.com/npclaudiu/gwh/internal/gitops"
+	"github.com/npclaudiu/gwh/internal/gwhlayout"
 )
 
+// Warehouse represents a handle that manages a Git warehouse.
 type Warehouse struct {
-	warehouseLayout *hostfs.WarehouseLayout
+	layout          *gwhlayout.WarehouseLayout
 	controlDatabase *controldb.ControlDatabase
 }
 
+// Open opens a warehouse at the specified location. If the warehouse does not
+// exist, it will be created.
 func Open(location string) (*Warehouse, error) {
 	// Make sure we have a valid file layout.
 	//
-	warehouseLayout, err := hostfs.NewWarehouseLayout(location)
+	layout, err := gwhlayout.New(location)
 
 	if err != nil {
 		return nil, fmt.Errorf("gwh: %w", err)
@@ -23,7 +29,7 @@ func Open(location string) (*Warehouse, error) {
 
 	// Open control database.
 	//
-	controlDatabaseFile := warehouseLayout.GetPath(hostfs.ControlDatabaseFile)
+	controlDatabaseFile := layout.GetKnownPath(gwhlayout.ControlDatabaseFile)
 	controlDatabase, err := controldb.Open(controlDatabaseFile)
 
 	if err != nil {
@@ -31,11 +37,53 @@ func Open(location string) (*Warehouse, error) {
 	}
 
 	return &Warehouse{
-		warehouseLayout: warehouseLayout,
+		layout:          layout,
 		controlDatabase: controlDatabase,
 	}, nil
 }
 
+// Close closes the warehouse handle.
 func (w *Warehouse) Close() {
 	w.controlDatabase.Close()
+}
+
+// LinkRepository links a Git repository to the warehouse.
+func (w *Warehouse) LinkRepository(name, repositoryPath string) error {
+	// Validate repository name.
+	//
+	if !w.layout.IsNameValid(name) {
+		return fmt.Errorf("gwh: invalid repository name")
+	}
+
+	// Open repository.
+	//
+	path := w.layout.ResolvePath(repositoryPath)
+	r, err := gitops.OpenRepository(path)
+
+	if err != nil {
+		return fmt.Errorf("gwh: failed to open repository for linking: %w", err)
+	}
+
+	storage, ok := r.Storer.(*filesystem.Storage)
+
+	if !ok {
+		return fmt.Errorf("gwh: repository storage is not a supported file system")
+	}
+
+	// Link repository using its relative path to the warehouse directory.
+	//
+	dotgit := storage.Filesystem().Root()
+	dotgwh := w.layout.GetKnownPath(gwhlayout.WarehouseDirectory)
+
+	path, err = filepath.Rel(dotgwh, dotgit)
+
+	if err != nil {
+		return fmt.Errorf("gwh: failed to calculate relative path to repository: %w", err)
+	}
+
+	if err := w.controlDatabase.LinkRepository(name, path); err != nil {
+		return fmt.Errorf("gwh: failed to link repository: %w", err)
+	}
+
+	return nil
 }

@@ -3,3 +3,9 @@ create table if not exists gwh_registry (
     key text unique not null,
     value text not null
 );
+
+create table if not exists gwh_git_repositories (
+    id integer not null primary key,
+    name text unique not null,
+    path text unique not null
+);

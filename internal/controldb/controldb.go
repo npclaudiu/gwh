@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -237,6 +238,32 @@ func (c *ControlDatabase) loadRegistryValue(key string) (string, error) {
 	}
 
 	return "", nil
+}
+
+//#endregion
+
+//#region Linking
+
+func (c *ControlDatabase) LinkRepository(name, path string) error {
+	q := `
+		insert into gwh_git_repositories (name, path)
+			values (?, ?);
+	`
+
+	if _, err := c.db.Exec(q, name, path); err != nil {
+		sqliteErr, ok := err.(sqlite3.Error)
+
+		// Ignore unique constraint errors. Handling this case in code rather
+		// than using `on conflict (...) do nothing` in SQL for flexibility.
+		if ok && sqliteErr.Code != sqlite3.ErrConstraint {
+			return fmt.Errorf("failed to link repository: %w", err)
+		}
+	}
+
+	// TODO(npclaudiu): Add support for recursively linking submodules of
+	// the repository being linked.
+
+	return nil
 }
 
 //#endregion

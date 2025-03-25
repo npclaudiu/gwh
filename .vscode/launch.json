@@ -11,6 +11,19 @@
             "args": [
                 "init"
             ]
+        },
+        {
+            "name": "Launch `gwh link repo1 .`",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/gwh/",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "link",
+                "repo1",
+                "."
+            ]
         }
     ]
 }

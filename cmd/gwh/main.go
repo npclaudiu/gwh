@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -9,6 +10,11 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/npclaudiu/gwh/v1"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	kAppName    = "gwh"
+	kAppVersion = "0.1.0" // TODO(npclaudiu): Inject at build.
 )
 
 func main() {
@@ -24,7 +30,9 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:                   "gwh",
+		Name:                   kAppName,
+		Version:                kAppVersion,
+		Usage:                  "manage local Git warehouses",
 		Description:            "Git Analitics Warehouse",
 		UseShortOptionHandling: true,
 		EnableBashCompletion:   true,
@@ -45,10 +53,39 @@ func main() {
 					log.Debug("initializing warehouse...")
 
 					location := cliPrefixFlag(cliCtx, cwd)
-					_, err := gwh.Open(location)
+					warehouse, err := gwh.Open(location)
 
 					if err != nil {
-						log.Fatal("init failed", "error", err)
+						die("init", err)
+					}
+
+					defer warehouse.Close()
+
+					return nil
+				},
+			},
+			{
+				Name:  "link",
+				Usage: "link repository",
+				Args:  true,
+				Action: func(cliCtx *cli.Context) error {
+					log.Debug("linking repository...")
+
+					location := cliPrefixFlag(cliCtx, cwd)
+					warehouse, err := gwh.Open(location)
+
+					if err != nil {
+						die("link", err)
+					}
+
+					defer warehouse.Close()
+
+					args := cliCtx.Args()
+					name := args.Get(0)
+					path := args.Get(1)
+
+					if err := warehouse.LinkRepository(name, path); err != nil {
+						die("link", err)
 					}
 
 					return nil
@@ -60,6 +97,11 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func die(cmd string, err error) {
+	msg := fmt.Sprintf("%s failed", cmd)
+	log.Fatal(msg, "error", err)
 }
 
 func cliFlag(cliCtx *cli.Context, flagName string, defaultValue string) string {

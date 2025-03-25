@@ -1,4 +1,4 @@
-package hostfs
+package gwhlayout
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 )
 
 const (
@@ -17,16 +18,22 @@ const (
 type WarehouseLayoutPath int
 
 const (
-	WarehouseDirectory WarehouseLayoutPath = iota
+	WorkingDirectory WarehouseLayoutPath = iota
+	WarehouseDirectory
 	ControlDatabaseFile
 )
 
+var (
+	nameRegexp = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-]*$`)
+)
+
 type WarehouseLayout struct {
+	workingDirectoryPath    string
 	warehouseDirectoryPath  string
 	controlDatabaseFilePath string
 }
 
-func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
+func New(location string) (*WarehouseLayout, error) {
 	// Check location.
 	//
 	cwd, err := os.Getwd()
@@ -66,6 +73,7 @@ func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
 	}
 
 	wl := &WarehouseLayout{
+		workingDirectoryPath:    location,
 		warehouseDirectoryPath:  whDir,
 		controlDatabaseFilePath: path.Join(whDir, ControlDatabaseFileName),
 	}
@@ -73,8 +81,10 @@ func NewWarehouseLayout(location string) (*WarehouseLayout, error) {
 	return wl, nil
 }
 
-func (wl *WarehouseLayout) GetPath(p WarehouseLayoutPath) string {
+func (wl *WarehouseLayout) GetKnownPath(p WarehouseLayoutPath) string {
 	switch p {
+	case WorkingDirectory:
+		return wl.workingDirectoryPath
 	case WarehouseDirectory:
 		return wl.warehouseDirectoryPath
 	case ControlDatabaseFile:
@@ -82,4 +92,16 @@ func (wl *WarehouseLayout) GetPath(p WarehouseLayoutPath) string {
 	default:
 		return ""
 	}
+}
+
+func (wl *WarehouseLayout) ResolvePath(p string) string {
+	if filepath.IsAbs(p) {
+		return p
+	}
+
+	return path.Join(wl.workingDirectoryPath, p)
+}
+
+func (wl *WarehouseLayout) IsNameValid(name string) bool {
+	return nameRegexp.MatchString(name)
 }

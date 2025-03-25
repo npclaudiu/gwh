@@ -17,17 +17,17 @@ cd path/to/project_x
 gwh init
 
 # Link a couple of Git repositories. This will not import any data yet.
-gwh link git_repository_1
-gwh link subdir/git_repository_2 --recursive
+gwh link repo1 git_repository_1
+gwh link repo2 subdir/git_repository_2 # --recursive
 
-# Import changes from all repositories incrementally.
-gwh sync
+# Import changes from the specified repository incrementally.
+gwh sync repo1
 ```
 
 ## Go Library
 
 ```sh
-go get https://github.com/npclaudiu/gwh
+go get https://github.com/npclaudiu/gwh/v1
 ```
 
 ```go
@@ -53,15 +53,15 @@ func demo() error {
     // Link Git repository at the specified path. This will not cause any
     // data synchronization at this point.
     //
-    err := warehouse.LinkRepository("path/to/git_repository")
+    err := warehouse.LinkRepository("repo1", "path/to/git_repository")
 
     if err != nil {
         return fmt.Errorf("failed to link repository: %w", err)
     }
 
-    // Pull data from all the linked repositories incrementally.
+    // Pull data from the repository incrementally.
     //
-    err := warehouse.Sync()
+    err := warehouse.SyncRepository("repo1")
 
     if err != nil {
         return fmt.Errorf("failed to pull data from repositories: %w", err)
